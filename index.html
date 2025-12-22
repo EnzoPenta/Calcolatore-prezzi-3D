@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calcolatore Prezzi Stampa 3D</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #0A0E27;
+            --secondary: #1B2B65;
+            --accent: #00D9FF;
+            --accent-warm: #FF6B35;
+            --surface: #151B3D;
+            --surface-light: #1E2749;
+            --text: #E8ECF5;
+            --text-muted: #8B93B0;
+            --success: #00FFA3;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 217, 255, 0.15) 0%, transparent 70%);
+            animation: float 20s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            50% { transform: translate(-20px, 20px) rotate(5deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-warm) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            animation: fadeIn 1s ease-out 0.3s backwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 968px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 70px rgba(0, 217, 255, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-warm) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .card-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 20px;
+            height: 2px;
+            background: var(--accent);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--surface-light);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(0, 217, 255, 0.1);
+        }
+
+        input:focus + label,
+        select:focus + label {
+            color: var(--accent);
+        }
+
+        .input-suffix {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%238B93B0' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 2.5rem;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, var(--surface) 0%, var(--surface-light) 100%);
+            border: 2px solid var(--accent);
+            position: sticky;
+            top: 2rem;
+        }
+
+        .result-card:hover {
+            transform: none;
+        }
+
+        .price-display {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(0, 217, 255, 0.05);
+            border-radius: 16px;
+            margin: 1.5rem 0;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+
+        .price-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .price-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--success) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .price-breakdown {
+            margin-top: 1.5rem;
+        }
+
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        .breakdown-item:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+
+        .breakdown-label {
+            color: var(--text-muted);
+        }
+
+        .breakdown-value {
+            font-family: 'Space Mono', monospace;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        button {
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-warm) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--surface-light);
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .info-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--accent);
+            margin-top: 0.5rem;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            color: var(--text-muted);
+            margin-left: 0.25rem;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.5rem 1rem;
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            z-index: 10;
+            margin-bottom: 0.5rem;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .result-card {
+                position: relative;
+                top: 0;
+            }
+        }
+
+        /* Animazione per i numeri */
+        @keyframes countUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .price-value.updating {
+            animation: countUp 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Calcolatore Prezzi Stampa 3D</h1>
+            <p class="subtitle">Calcola il prezzo perfetto per i tuoi lavori di stampa 3D</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Form Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🖨️</div>
+                    <h2 class="card-title">Parametri di Stampa</h2>
+                </div>
+
+                <!-- Dati Stampante -->
+                <div class="form-section">
+                    <h3 class="section-title">Stampante</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="printerPower">Consumo Stampante (W)
+                                <span class="tooltip" data-tooltip="Consumo medio in Watt della tua stampante">ℹ️</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="number" id="printerPower" value="200" min="0" step="10">
+                                <span class="input-suffix">W</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="electricityCost">Costo Energia (€/kWh)
+                                <span class="tooltip" data-tooltip="Prezzo dell'energia elettrica">ℹ️</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="number" id="electricityCost" value="0.25" min="0" step="0.01">
+                                <span class="input-suffix">€/kWh</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dati Filamento -->
+                <div class="form-section">
+                    <h3 class="section-title">Filamento</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="filamentType">Tipo di Filamento</label>
+                            <select id="filamentType">
+                                <option value="pla">PLA</option>
+                                <option value="petg">PETG</option>
+                                <option value="abs">ABS</option>
+                                <option value="tpu">TPU</option>
+                                <option value="nylon">Nylon</option>
+                                <option value="custom">Personalizzato</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="filamentCost">Costo Filamento (€/kg)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="filamentCost" value="20" min="0" step="1">
+                                <span class="input-suffix">€/kg</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="filamentUsed">Filamento Utilizzato (g)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="filamentUsed" value="100" min="0" step="1">
+                                <span class="input-suffix">g</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="filamentWaste">Spreco Filamento (%)
+                                <span class="tooltip" data-tooltip="Percentuale di spreco (supporti, purge, fallimenti)">ℹ️</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="number" id="filamentWaste" value="10" min="0" max="100" step="1">
+                                <span class="input-suffix">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dati Stampa -->
+                <div class="form-section">
+                    <h3 class="section-title">Tempo di Stampa</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="printHours">Ore</label>
+                            <input type="number" id="printHours" value="5" min="0" step="1">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="printMinutes">Minuti</label>
+                            <input type="number" id="printMinutes" value="30" min="0" max="59" step="1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Costi Aggiuntivi -->
+                <div class="form-section">
+                    <h3 class="section-title">Costi & Margini</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="laborCost">Costo Manodopera (€/h)
+                                <span class="tooltip" data-tooltip="Quanto vale il tuo tempo">ℹ️</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="number" id="laborCost" value="15" min="0" step="1">
+                                <span class="input-suffix">€/h</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="laborTime">Tempo Lavoro (min)
+                                <span class="tooltip" data-tooltip="Post-processing, setup, packaging">ℹ️</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="number" id="laborTime" value="30" min="0" step="5">
+                                <span class="input-suffix">min</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="markup">Margine di Profitto (%)
+                                <span class="tooltip" data-tooltip="Il tuo margine sul costo totale">ℹ️</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="number" id="markup" value="30" min="0" max="500" step="5">
+                                <span class="input-suffix">%</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fixedCost">Costi Fissi (€)
+                                <span class="tooltip" data-tooltip="Ammortamento stampante, manutenzione">ℹ️</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="number" id="fixedCost" value="2" min="0" step="0.5">
+                                <span class="input-suffix">€</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Card -->
+            <div class="card result-card">
+                <div class="card-header">
+                    <div class="card-icon">💰</div>
+                    <h2 class="card-title">Preventivo</h2>
+                </div>
+
+                <div class="price-display">
+                    <div class="price-label">Prezzo Finale</div>
+                    <div class="price-value" id="finalPrice">€0.00</div>
+                    <div class="info-badge">
+                        <span>⚡</span>
+                        <span>Aggiornamento in tempo reale</span>
+                    </div>
+                </div>
+
+                <div class="price-breakdown">
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Costo Filamento</span>
+                        <span class="breakdown-value" id="costFilament">€0.00</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Costo Energia</span>
+                        <span class="breakdown-value" id="costElectricity">€0.00</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Costo Manodopera</span>
+                        <span class="breakdown-value" id="costLabor">€0.00</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Costi Fissi</span>
+                        <span class="breakdown-value" id="costFixed">€0.00</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Costo Totale</span>
+                        <span class="breakdown-value" id="totalCost">€0.00</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">Margine (+<span id="markupPercent">0</span>%)</span>
+                        <span class="breakdown-value" id="profitAmount">€0.00</span>
+                    </div>
+                    <div class="breakdown-item">
+                        <span class="breakdown-label">PREZZO AL CLIENTE</span>
+                        <span class="breakdown-value" id="finalPriceBottom">€0.00</span>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-primary" onclick="downloadQuote()">
+                        📄 Scarica Preventivo
+                    </button>
+                    <button class="btn-secondary" onclick="resetForm()">
+                        🔄 Reset
+                    </button>
+                </div>
+
+                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(0, 217, 255, 0.05); border-radius: 12px; border: 1px solid rgba(0, 217, 255, 0.2);">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+                        <strong style="color: var(--accent);">💡 Suggerimento:</strong><br>
+                        Modifica i valori per vedere il prezzo aggiornarsi in tempo reale!
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 Enzo Pentassuglia | Calcolatore Prezzi Stampa 3D</p>
+        </footer>
+    </div>
+
+    <script>
+        // Valori predefiniti per tipo di filamento
+        const filamentPrices = {
+            pla: 20,
+            petg: 25,
+            abs: 22,
+            tpu: 35,
+            nylon: 40,
+            custom: 20
+        };
+
+        // Aggiorna costo filamento quando cambia il tipo
+        document.getElementById('filamentType').addEventListener('change', function() {
+            if (this.value !== 'custom') {
+                document.getElementById('filamentCost').value = filamentPrices[this.value];
+                calculatePrice();
+            }
+        });
+
+        // Calcola il prezzo
+        function calculatePrice() {
+            // Ottieni i valori
+            const printerPower = parseFloat(document.getElementById('printerPower').value) || 0;
+            const electricityCost = parseFloat(document.getElementById('electricityCost').value) || 0;
+            const filamentCost = parseFloat(document.getElementById('filamentCost').value) || 0;
+            const filamentUsed = parseFloat(document.getElementById('filamentUsed').value) || 0;
+            const filamentWaste = parseFloat(document.getElementById('filamentWaste').value) || 0;
+            const printHours = parseFloat(document.getElementById('printHours').value) || 0;
+            const printMinutes = parseFloat(document.getElementById('printMinutes').value) || 0;
+            const laborCost = parseFloat(document.getElementById('laborCost').value) || 0;
+            const laborTime = parseFloat(document.getElementById('laborTime').value) || 0;
+            const markup = parseFloat(document.getElementById('markup').value) || 0;
+            const fixedCost = parseFloat(document.getElementById('fixedCost').value) || 0;
+
+            // Calcoli
+            const totalPrintTime = printHours + (printMinutes / 60);
+            const totalFilament = filamentUsed * (1 + filamentWaste / 100);
+            
+            const costFilament = (totalFilament / 1000) * filamentCost;
+            const costElectricity = (printerPower / 1000) * totalPrintTime * electricityCost;
+            const costLabor = (laborTime / 60) * laborCost;
+            const costFixed = fixedCost;
+
+            const totalCost = costFilament + costElectricity + costLabor + costFixed;
+            const profitAmount = totalCost * (markup / 100);
+            const finalPrice = totalCost + profitAmount;
+
+            // Aggiorna UI con animazione
+            document.getElementById('finalPrice').classList.add('updating');
+            setTimeout(() => {
+                document.getElementById('finalPrice').classList.remove('updating');
+            }, 500);
+
+            document.getElementById('costFilament').textContent = `€${costFilament.toFixed(2)}`;
+            document.getElementById('costElectricity').textContent = `€${costElectricity.toFixed(2)}`;
+            document.getElementById('costLabor').textContent = `€${costLabor.toFixed(2)}`;
+            document.getElementById('costFixed').textContent = `€${costFixed.toFixed(2)}`;
+            document.getElementById('totalCost').textContent = `€${totalCost.toFixed(2)}`;
+            document.getElementById('profitAmount').textContent = `€${profitAmount.toFixed(2)}`;
+            document.getElementById('markupPercent').textContent = markup.toFixed(0);
+            document.getElementById('finalPrice').textContent = `€${finalPrice.toFixed(2)}`;
+            document.getElementById('finalPriceBottom').textContent = `€${finalPrice.toFixed(2)}`;
+        }
+
+        // Scarica preventivo PDF completo
+        function downloadQuote() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Ottieni tutti i valori
+            const printerPower = parseFloat(document.getElementById('printerPower').value) || 0;
+            const electricityCost = parseFloat(document.getElementById('electricityCost').value) || 0;
+            const filamentType = document.getElementById('filamentType').options[document.getElementById('filamentType').selectedIndex].text;
+            const filamentCost = parseFloat(document.getElementById('filamentCost').value) || 0;
+            const filamentUsed = parseFloat(document.getElementById('filamentUsed').value) || 0;
+            const filamentWaste = parseFloat(document.getElementById('filamentWaste').value) || 0;
+            const printHours = parseFloat(document.getElementById('printHours').value) || 0;
+            const printMinutes = parseFloat(document.getElementById('printMinutes').value) || 0;
+            const laborCost = parseFloat(document.getElementById('laborCost').value) || 0;
+            const laborTime = parseFloat(document.getElementById('laborTime').value) || 0;
+            const markup = parseFloat(document.getElementById('markup').value) || 0;
+            const fixedCost = parseFloat(document.getElementById('fixedCost').value) || 0;
+
+            // Calcoli
+            const totalPrintTime = printHours + (printMinutes / 60);
+            const totalFilament = filamentUsed * (1 + filamentWaste / 100);
+            
+            const costFilament = (totalFilament / 1000) * filamentCost;
+            const costElectricity = (printerPower / 1000) * totalPrintTime * electricityCost;
+            const costLabor = (laborTime / 60) * laborCost;
+            const totalCost = costFilament + costElectricity + costLabor + fixedCost;
+            const profitAmount = totalCost * (markup / 100);
+            const finalPrice = totalCost + profitAmount;
+
+            // Data corrente
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('it-IT');
+
+            // Impostazioni PDF
+            const pageWidth = doc.internal.pageSize.width;
+            const margin = 20;
+            let yPos = 20;
+
+            // Header
+            doc.setFillColor(10, 14, 39);
+            doc.rect(0, 0, pageWidth, 45, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.setFont(undefined, 'bold');
+            doc.text('PREVENTIVO STAMPA 3D', pageWidth / 2, 20, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text('Enzo Pentassuglia', pageWidth / 2, 30, { align: 'center' });
+            doc.text(`Data: ${dateStr}`, pageWidth / 2, 37, { align: 'center' });
+
+            yPos = 55;
+
+            // Reset colore testo
+            doc.setTextColor(0, 0, 0);
+
+            // PARAMETRI DI STAMPA
+            doc.setFillColor(0, 217, 255);
+            doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('PARAMETRI DI STAMPA', margin + 3, yPos + 5.5);
+            
+            yPos += 15;
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+
+            // Dettagli stampante
+            doc.text(`Consumo Stampante: ${printerPower} W`, margin, yPos);
+            yPos += 6;
+            doc.text(`Costo Energia Elettrica: €${electricityCost.toFixed(2)}/kWh`, margin, yPos);
+            yPos += 6;
+            doc.text(`Tempo di Stampa: ${printHours}h ${printMinutes}min (${totalPrintTime.toFixed(2)}h totali)`, margin, yPos);
+            yPos += 10;
+
+            // Dettagli filamento
+            doc.text(`Tipo Filamento: ${filamentType}`, margin, yPos);
+            yPos += 6;
+            doc.text(`Costo Filamento: €${filamentCost.toFixed(2)}/kg`, margin, yPos);
+            yPos += 6;
+            doc.text(`Quantità Utilizzata: ${filamentUsed}g`, margin, yPos);
+            yPos += 6;
+            doc.text(`Spreco Filamento: ${filamentWaste}% (${totalFilament.toFixed(1)}g totali)`, margin, yPos);
+            yPos += 10;
+
+            // Manodopera
+            doc.text(`Costo Manodopera: €${laborCost.toFixed(2)}/h`, margin, yPos);
+            yPos += 6;
+            doc.text(`Tempo Lavoro: ${laborTime} minuti`, margin, yPos);
+            yPos += 15;
+
+            // DETTAGLIO COSTI
+            doc.setFillColor(0, 217, 255);
+            doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('DETTAGLIO COSTI', margin + 3, yPos + 5.5);
+            
+            yPos += 15;
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+
+            // Linee dei costi
+            const costLines = [
+                { label: 'Costo Filamento', value: costFilament },
+                { label: 'Costo Energia Elettrica', value: costElectricity },
+                { label: 'Costo Manodopera', value: costLabor },
+                { label: 'Costi Fissi (ammortamento)', value: fixedCost }
+            ];
+
+            costLines.forEach(line => {
+                doc.setFont(undefined, 'normal');
+                doc.text(line.label, margin, yPos);
+                doc.text(`€${line.value.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+                yPos += 6;
+            });
+
+            // Linea separatore
+            yPos += 2;
+            doc.setDrawColor(200, 200, 200);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 8;
+
+            // Subtotale
+            doc.setFont(undefined, 'bold');
+            doc.text('COSTO TOTALE', margin, yPos);
+            doc.text(`€${totalCost.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+            yPos += 8;
+
+            // Margine
+            doc.setFont(undefined, 'normal');
+            doc.text(`Margine di Profitto (${markup}%)`, margin, yPos);
+            doc.text(`€${profitAmount.toFixed(2)}`, pageWidth - margin, yPos, { align: 'right' });
+            yPos += 10;
+
+            // PREZZO FINALE
+            doc.setFillColor(0, 255, 163);
+            doc.rect(margin, yPos, pageWidth - 2 * margin, 12, 'F');
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text('PREZZO FINALE AL CLIENTE', margin + 3, yPos + 8);
+            doc.text(`€${finalPrice.toFixed(2)}`, pageWidth - margin - 3, yPos + 8, { align: 'right' });
+
+            yPos += 20;
+
+            // Note
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'italic');
+            doc.setTextColor(100, 100, 100);
+            doc.text('Questo preventivo include tutti i costi di produzione, energia, materiali e manodopera.', margin, yPos);
+            yPos += 5;
+            doc.text('Il prezzo finale riflette il margine di profitto concordato.', margin, yPos);
+
+            // Footer
+            yPos = doc.internal.pageSize.height - 15;
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text('© 2025 Enzo Pentassuglia | Calcolatore Prezzi Stampa 3D', pageWidth / 2, yPos, { align: 'center' });
+
+            // Salva PDF
+            doc.save(`Preventivo_Stampa3D_${dateStr.replace(/\//g, '-')}.pdf`);
+
+            // Feedback visivo
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Scaricato!';
+            btn.style.background = 'linear-gradient(135deg, #00FFA3 0%, #00D9FF 100%)';
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '';
+            }, 2000);
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('printerPower').value = 200;
+            document.getElementById('electricityCost').value = 0.25;
+            document.getElementById('filamentType').value = 'pla';
+            document.getElementById('filamentCost').value = 20;
+            document.getElementById('filamentUsed').value = 100;
+            document.getElementById('filamentWaste').value = 10;
+            document.getElementById('printHours').value = 5;
+            document.getElementById('printMinutes').value = 30;
+            document.getElementById('laborCost').value = 15;
+            document.getElementById('laborTime').value = 30;
+            document.getElementById('markup').value = 30;
+            document.getElementById('fixedCost').value = 2;
+            
+            calculatePrice();
+        }
+
+        // Aggiungi listener a tutti gli input
+        document.querySelectorAll('input, select').forEach(element => {
+            element.addEventListener('input', calculatePrice);
+            element.addEventListener('change', calculatePrice);
+        });
+
+        // Calcolo iniziale
+        calculatePrice();
+    </script>
+</body>
+</html>
