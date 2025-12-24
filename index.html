@@ -776,9 +776,9 @@
             const margin = 20;
             let yPos = 20;
 
-            // Header
+            // Header (SENZA NOME SOPRA)
             doc.setFillColor(10, 14, 39);
-            doc.rect(0, 0, pageWidth, 45, 'F');
+            doc.rect(0, 0, pageWidth, 40, 'F');
             
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(24);
@@ -787,10 +787,9 @@
             
             doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
-            doc.text('Enzo Pentassuglia', pageWidth / 2, 30, { align: 'center' });
-            doc.text(`Data: ${dateStr}`, pageWidth / 2, 37, { align: 'center' });
+            doc.text(`Data: ${dateStr}`, pageWidth / 2, 32, { align: 'center' });
 
-            yPos = 55;
+            yPos = 50;
 
             // Reset colore testo
             doc.setTextColor(0, 0, 0);
@@ -896,7 +895,7 @@
             yPos += 5;
             doc.text('Il prezzo finale riflette il margine di profitto concordato.', margin, yPos);
 
-            // Footer
+            // Footer (CON COPYRIGHT)
             yPos = doc.internal.pageSize.height - 15;
             doc.setFontSize(8);
             doc.setTextColor(150, 150, 150);
